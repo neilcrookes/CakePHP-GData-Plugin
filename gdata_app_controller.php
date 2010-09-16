@@ -95,11 +95,12 @@ class GdataAppController extends AppController {
    *
    * @param String $dataSourceName e.g. 'youTube'
    * @param String $returnTo The url to return to on success or failure. N.B.
-   * should be urlencode'd 3 times
+   * should be base64URLencoded (i.e. like base64 but with + / = replaced with 
+   * - _ , respectively)
    */
   public function get_gdata_oauth_request_token($dataSourceName, $returnTo = null) {
     if ($returnTo) {
-      $returnTo = urldecode($returnTo);
+      $returnTo = base64_decode(strtr($returnTo, '-_,', '+/='));
     }
     $this->GdataAuth->getOAuthRequestToken($dataSourceName, $returnTo);
   }

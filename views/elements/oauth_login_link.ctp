@@ -13,7 +13,7 @@ echo $this->Html->link(
     'plugin' => 'gdata',
     'action' => 'get_gdata_oauth_request_token',
     $useDbConfig,
-    urlencode(urlencode(urlencode($this->here)))
+    strtr(base64_encode('/'.$this->params['url']['url']), '+/=', '-_,')
   )
 );
 ?>
