@@ -175,8 +175,13 @@ class GdataAuthComponent extends Object {
    *  to get an OAuth token.
    * @param string $returnTo The URL the user should be redirected to after the
    *  hand shaking / OAuth Dance
+   * @param array $extraParams Extra key-value pairs to send to Google's
+   *  OAuthAuthorizeToken page, for instance the 'hd' param which is used to
+   *  specify a particular 'hosted domain' for the user to log in to, instead
+   *  of using a personal google account or the universal login page which
+   *  doesn't necessarily offer all the domains you have access to.
    */
-  public function getOAuthRequestToken($dataSourceName, $returnTo = null) {
+  public function getOAuthRequestToken($dataSourceName, $returnTo = null, $extraParams = array()) {
 
     if (Configure::read('Session.checkAgent') === true) {
       trigger_error(__('Set Session.checkAgent to false in core.php to avoid referrer check', true));
@@ -242,8 +247,14 @@ class GdataAuthComponent extends Object {
     $this->Session->write('Gdata.Auth.' . $this->_dataSourceName . '.oauth_request_token', $response['oauth_token']);
     $this->Session->write('Gdata.Auth.' . $this->_dataSourceName . '.oauth_request_token_secret', $response['oauth_token_secret']);
 
+	// If there were any extra parameters, build a querystring from them
+	$extraParamsStr = '';
+	if(!empty($extraParams)) {
+		$extraParamsStr = '&'.http_build_query($extraParams);
+	}
+
     // Redirect user to google to Authorize the application
-    $this->controller->redirect('https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=' . $response['oauth_token']);
+    $this->controller->redirect('https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=' . $response['oauth_token'] . $extraParamsStr);
 
   }
 
