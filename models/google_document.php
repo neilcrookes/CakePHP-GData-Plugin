@@ -36,7 +36,30 @@ class GoogleDocument extends GdataAppModel {
 	public $_schema = array(
 		'id' => array('type' => 'string', 'length' => '255'),
 		'title' => array('type' => 'string', 'length' => '255'),
+		'type' => array('type' => 'string', 'length' => '255'),
 		'file' => array('type' => 'blob'),
+	);
+	
+	/**
+	* Validation definition
+	*
+	* @var array
+	*/
+	public $validate = array(
+		'title' => array(
+			'notEmpty'=>array(
+				'rule' => 'notEmpty',
+				'message' => 'Please enter a valid title.',
+				'allowEmpty' => false
+			),
+			'requiredOnCreate'=>array(
+				'rule' => 'notEmpty',
+				'message' => 'Please enter a valid title.',
+				'allowEmpty' => false,
+				'required'=>true,
+				'on'=>'create'
+			),
+		),
 	);
 
 	/**
@@ -61,8 +84,17 @@ class GoogleDocument extends GdataAppModel {
 
 	/**
 	 * Creates the API XML request containing the meta data and adds it to the
-	 * request body along with the file as multipart data, and sets other values
-	 * in the request array required for uploading a document to Google Docs.
+	 * request body.
+	 * 
+	 * If a 'file' key contains a file upload array, then the request is set to
+	 * multipart mode and the file attached to send the upload to Google.
+	 *
+	 * If there is no 'file' key then a blank document is created, using the 'title'
+	 * key as its name. A 'type' key may also be supplied containing 'document' or
+	 * 'spreadsheet'. Other types are not tested yet. 
+	 * 
+	 * Note that the 'type' key is not necessary when uploading a file, as google
+	 * seems to work that out for itself.
 	 *
 	 * ClassRegistry::init('Gdata.GoogleDocument')->save(array(
 	 *	 'GoogleDocument' => array(
@@ -84,31 +116,44 @@ class GoogleDocument extends GdataAppModel {
 		$doc = new DOMDocument('1.0', 'utf-8');
 		$entry = $doc->createElementNS('http://www.w3.org/2005/Atom', 'atom:entry');
 		$doc->appendChild($entry);
+		
+		$type = 'document';
+		if(!empty($data[$this->alias]['type'])) {
+			$type = $data[$this->alias]['type'];
+		}
 
 		$category = $doc->createElement('atom:category');
 		$category->setAttribute('scheme' ,'http://schemas.google.com/g/2005#kind');
-		$category->setAttribute('term' ,'http://schemas.google.com/docs/2007#document');
-		$category->setAttribute('label' ,'document');
+		$category->setAttribute('term' ,'http://schemas.google.com/docs/2007#'.$type);
+		$category->setAttribute('label' ,$type);
 		$entry->appendChild($category);
 
-		$category = $doc->createElementNS('http://www.w3.org/2005/Atom', 'atom:title', $data[$this->alias]['file']['name']);
+		$category = $doc->createElementNS('http://www.w3.org/2005/Atom', 'atom:title', $data[$this->alias]['title']);
 		$entry->appendChild($category);
-
-		// The boundary string is used to identify the different parts of a
-		// multipart http request
-		$boundaryString = 'Next_Part_' . String::uuid();
-
-		// Build the multipart body of the http request
-		$body = "--$boundaryString\r\n";
-		$body.= "Content-Type: application/atom+xml; charset=UTF-8\r\n";
-		$body.= "\r\n";
+		
+		$body = '';
+		$mainContentType  = 'application/atom+xml';
+		$hasFileUpload = !empty($data[$this->alias]['file']);
+		
+		if($hasFileUpload) {
+			$boundaryString = 'Next_Part_' . String::uuid();
+			$mainContentType = 'multipart/related; boundary="' . $boundaryString . '"';
+			$body.= "--$boundaryString\r\n";
+			$body.= "Content-Type: application/atom+xml; charset=UTF-8\r\n";
+			$body.= "\r\n";
+		}
+		
 		$body.= $doc->saveXML()."\r\n";
-		$body.= "--$boundaryString\r\n";
-		$body.= "Content-Type: {$data[$this->alias]['file']['type']}\r\n";
-		$body.= "Content-Transfer-Encoding: binary\r\n";
-		$body.= "\r\n";
-		$body.= file_get_contents($data[$this->alias]['file']['tmp_name'])."\r\n";
-		$body.= "--$boundaryString--\r\n";
+		
+		if($hasFileUpload) {
+			$body.= "--$boundaryString\r\n";
+			$body.= "Content-Type: {$data[$this->alias]['file']['type']}\r\n";
+			$body.= "Content-Transfer-Encoding: binary\r\n";
+			$body.= "\r\n";
+			$body.= file_get_contents($data[$this->alias]['file']['tmp_name'])."\r\n";
+			$body.= "\r\n";
+			$body.= "--$boundaryString--\r\n";
+		}
 
 		$this->request = array(
 			'uri' => array(
@@ -116,8 +161,8 @@ class GoogleDocument extends GdataAppModel {
 				'path' => '/feeds/documents/private/full',
 			),
 			'header' => array(
-				'Content-Type' => 'multipart/related; boundary="' . $boundaryString . '"',
-				'Slug' => $data[$this->alias]['file']['name']
+				'Content-Type' => $mainContentType,
+				'Slug' => $data[$this->alias]['title']
 			),
 			'auth' => array(
 				'method' => 'OAuth',
