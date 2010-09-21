@@ -75,6 +75,11 @@ class GoogleDocument extends GdataAppModel {
 		if ($state == 'before') {
 			$this->request['auth'] = true;
 			$this->request['uri']['path'] = 'feeds/documents/private/full';
+			if(!empty($query['conditions']['title'])) {
+				$this->request['uri']['query']['title'] = $query['conditions']['title'];
+			} elseif (!empty($query['conditions']['q'])) {
+				$this->request['uri']['query']['q'] = $query['conditions']['q'];
+			}
 			$query = $this->_paginationParams($query);
 			return $query;
 		} else {
