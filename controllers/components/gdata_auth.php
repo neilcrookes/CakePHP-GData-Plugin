@@ -178,8 +178,8 @@ class GdataAuthComponent extends Object {
    */
   public function getOAuthRequestToken($dataSourceName, $returnTo = null) {
 
-    if (Configure::read('Session.security') != 'low') {
-      trigger_error(__('Set session security to low in core.php to avoid referrer check', true));
+    if (Configure::read('Session.checkAgent') === true) {
+      trigger_error(__('Set Session.checkAgent to false in core.php to avoid referrer check', true));
     }
 
     $this->_dataSourceName = $dataSourceName;
@@ -277,9 +277,9 @@ class GdataAuthComponent extends Object {
 
     App::import('Vendor', 'HttpSocketOauth');
     $HttpSocketOauth = new HttpSocketOauth();
-pr($request);
+
     $response = $HttpSocketOauth->request($request);
-pr($response);
+
     if ($HttpSocketOauth->response['status']['code'] != 200) {
       $this->Session->write('Gdata.Auth.' . $this->_dataSourceName . '.error', __('Could not get access token. Response for get access token was not OK.', true));
       $this->controller->redirect($this->Session->read('Gdata.Auth.' . $this->_dataSourceName . '.return_to'));
@@ -295,10 +295,9 @@ pr($response);
     // true and just before that, copy the oauth access token and secret to the
     // datasource config.
     $this->_setLoggedIn();
-pr($this->Session->read());
+
     $this->controller->redirect($this->Session->read('Gdata.Auth.' . $this->_dataSourceName . '.return_to'));
 
   }
 
 }
-?>

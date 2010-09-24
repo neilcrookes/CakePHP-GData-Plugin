@@ -64,6 +64,14 @@ class GdataSource extends RestSource {
       );
       foreach ($oAuthParams as $oAuthParam) {
         if (!isset($model->request['auth'][$oAuthParam])) {
+        	if (!isset($this->config[$oAuthParam])) {
+        		trigger_error(sprintf(
+        			__('Please specify (either statically or dynamically) the datasource config param "%1s" for connection config %2s.', true), 
+        			$oAuthParam,
+        			get_class($this)
+				), E_USER_ERROR);
+        		continue;
+        	}
           $model->request['auth'][$oAuthParam] = $this->config[$oAuthParam];
         }
       }
