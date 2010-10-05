@@ -41,6 +41,47 @@ class GoogleDocument extends GdataAppModel {
 	);
 	
 	/**
+	 * Map of all exportable formats for each document type.
+	 * The most obvious format is listed first so download functions can default to this.
+	 * 
+	 * @var array
+	 */
+	
+	static $googleDocumentExportMap = array(
+		'document'=>array(
+			'doc'=>'Microsoft Word',
+			'html'=>'HTML Format',
+			'odt'=>'Open Document Format',
+			'pdf'=>'Portable Document Format',
+			'png'=>'Portable Networks Graphic Image Format',
+			'rtf'=>'Rich Format',
+			'txt'=>'TXT File',
+			'zip'=>'ZIP archive. Contains the images (if any) used in the document and an exported .html file.'
+		),
+		'presentation'=>array(
+			'ppt'=>'Powerpoint Format',
+			'pdf'=>'Portable Document Format',
+			'png'=>'Portable Networks Graphic Image Format',
+			'swf'=>'Flash Format',
+			'txt'=>'TXT file'
+		),
+		'spreadsheet'=>array(
+			'xls'=>'XLS (Microsoft Excel)',
+			'csv'=>'CSV (Comma Seperated Value)',
+			'pdf'=>'PDF (Portable Document Format)',
+			'ods'=>'ODS (Open Document Spreadsheet)',
+			'tsv'=>'TSV (Tab Seperated Value)',
+			'html'=>'HTML Format'
+		),
+		'drawing'=>array(
+			'pdf'=>'PDF (Portable Document Format)',
+			'png'=>'XLS (Microsoft Excel)',
+			'jpeg'=>'CSV (Comma Seperated Value)',
+			'svg'=>'SVG (Scalable Vector Graphics)',
+		)
+	);
+	
+	/**
 	* Validation definition
 	*
 	* @var array
@@ -69,6 +110,7 @@ class GoogleDocument extends GdataAppModel {
 	 */
 	public $_findMethods = array(
 		'documents' => true,
+		'export' => true
 	);
 
 	protected function _findDocuments($state, $query = array(), $results = array()) {
@@ -81,6 +123,69 @@ class GoogleDocument extends GdataAppModel {
 				$this->request['uri']['query']['q'] = $query['conditions']['q'];
 			}
 			$query = $this->_paginationParams($query);
+			return $query;
+		} else {
+			return $results;
+		}
+	}
+	
+	/**
+	 * Enables find('export',$params) which will get the contents of a document
+	 * from google using its export API.
+	 * 
+	 * $query['conditions'] must include the following:
+	 *		'id'	-	the google ID of the document, usually supplied by Google in a "documents:key" format
+	 *					but we just want the part after the colon.
+	 *		'type'	-	the type of the document: spreadsheet|document|presentation|drawing
+	 * 
+	 * and may include an optional:
+	 *		'format'-	the lowercase file extension of the target format you want, 
+	 *					e.g. 'doc' or 'pdf'. See self::$googleDocumentExportMap
+	 *					for possible values.
+	 * 
+	 * On success, the resulting data will be in $this->response.
+	 * 
+	 * @param string $state
+	 * @param array $query
+	 * @param array $results
+	 * @return mixed
+	 */
+	
+	protected function _findExport($state, $query = array(), $results = array()) {
+		if ($state == 'before') {
+			foreach(array('type','id') as $requiredCondition) {
+				if(empty($query['conditions'][$requiredCondition])) {
+					trigger_error('Required condition '.$requiredCondition.' not set.');
+					return false;
+				}
+			}
+			$this->request['auth'] = true;
+			$this->request['uri']['query']['id'] = $query['conditions']['id'];
+			$this->request['uri']['host'] = 'docs.google.com';
+			switch ($query['conditions']['type']) {
+				case 'document' :
+					$this->request['uri']['path'] = 'feeds/download/documents/Export';
+					break;
+				case 'presentation' :
+					$this->request['uri']['path'] = 'feeds/download/presentations/Export';
+					break;
+				case 'drawing' :
+					$this->request['uri']['path'] = 'feeds/download/drawings/Export';
+					break;
+				case 'spreadsheet' :
+					unset($this->request['uri']['query']['id']);
+					$this->request['uri']['query']['key'] = $query['conditions']['id'];
+					$this->request['uri']['host'] = 'spreadsheets.google.com';
+					$this->request['uri']['path'] = 'feeds/download/spreadsheets/Export';
+					break;
+				default :
+					trigger_error('Unrecognised type!');
+					return false;
+					break;
+			}
+			if(!empty($query['conditions']['format'])) {
+				$this->request['uri']['query']['exportFormat'] = $query['conditions']['format'];
+			}
 			return $query;
 		} else {
 			return $results;

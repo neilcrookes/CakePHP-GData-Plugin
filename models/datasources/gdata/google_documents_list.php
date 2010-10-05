@@ -16,7 +16,7 @@ class GoogleDocumentsList extends GdataSource {
    *
    * @var string
    */
-  public $oAuthScope = 'https://docs.google.com/feeds/';
+  public $oAuthScope = 'https://docs.google.com/feeds/ https://spreadsheets.google.com/feeds/ https://docs.googleusercontent.com/';
 
   /**
    * Inserts the default hostname and scheme in the request uri if not already
