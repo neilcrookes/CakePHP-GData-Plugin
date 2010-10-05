@@ -75,8 +75,8 @@ class GoogleDocument extends GdataAppModel {
 		),
 		'drawing'=>array(
 			'pdf'=>'PDF (Portable Document Format)',
-			'png'=>'XLS (Microsoft Excel)',
-			'jpeg'=>'CSV (Comma Seperated Value)',
+			'png'=>'PNG (PNG Image)',
+			'jpeg'=>'JPEG (JPEG Image)',
 			'svg'=>'SVG (Scalable Vector Graphics)',
 		)
 	);
