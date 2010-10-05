@@ -178,7 +178,13 @@ class GoogleDocument extends GdataAppModel {
 		$result = parent::save($data, $validate, $fieldList);
 		
 		if($result){
-			$this->setInsertID($this->response['entry']['id']);
+			// In Google's documentation it looks like there should be a gd:resourceId node, but it appears 
+			// as simply resourceId to us. Keep an eye on this.
+			if(empty($this->response['entry']['resourceId'])) {
+				trigger_error('No resourceId from google.');
+				return false;
+			}
+			$this->setInsertID($this->response['entry']['resourceId']);
 		}
 		
 		return $result;
