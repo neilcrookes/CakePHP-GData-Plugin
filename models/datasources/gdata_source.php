@@ -87,7 +87,7 @@ class GdataSource extends RestSource {
       $model->request['header']['X-GData-Key'] = 'key=' . $this->config['X-GData-Key'];
     }
 
-    // Get the response from calling request on the Rest Source (it's parent)
+    // Get the response from calling request on the Rest Source (its parent)
     $response = parent::request($model);
 //    echo '<pre>';
 //    echo htmlspecialchars($this->Http->request['raw']);
